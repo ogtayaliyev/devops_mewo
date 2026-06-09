@@ -1,0 +1,40 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: postgresdb
+      POSTGRES_USER: postgresuser
+      POSTGRES_PASSWORD: postgrespassword
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgresuser -d postgresdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  back:
+    build: ./simple-back
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://postgresuser:postgrespassword@db:5432/postgresdb
+      PORT: 3000
+    depends_on:
+      db:
+        condition: service_healthy
+
+  front:
+    build:
+      context: ./simple-front
+      args:
+        VITE_API_URL: http://localhost:3000
+    ports:
+      - "8080:80"
+    depends_on:
+      - back
+
+volumes:
+  pgdata:
